@@ -17,7 +17,7 @@ export interface QuizQuestion {
    options: string[];
    correctAnswer: number;
    explanation: string;
-   category?: string;
+   category: string;
 }
 
 export interface QuizState {
