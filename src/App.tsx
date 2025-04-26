@@ -25,7 +25,7 @@ const initialQuestions: QuizQuestion[] = [
          "July 2, 1776",
          "July 4, 1776",
          "July 6, 1776",
-         "July 8, 1776"
+         "July 10, 1776"
       ],
       correctAnswer: 1,
       explanation: "The Declaration of Independence was signed on July 4, 1776, although some delegates signed it later.",
