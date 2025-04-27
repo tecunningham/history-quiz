@@ -81,7 +81,7 @@ const allQuestions: QuizQuestion[] = [
    },
    {
       id: 9,
-      question: "what was the crystal palace called?",
+      question: "what was the exebiton in the crystal palace called?",
       options: ["The Great Exhibition", "the glasshouse", "The London Eye", "The Tower of London"],
       correctAnswer: 0,
       category: "Victorian History"
@@ -124,12 +124,12 @@ function App() {
          [currentQuestionIndex]: selectedOptionIndex
       }));
       setIsFeedback(true);
-      // Play sound (disabled for now)
-      // if (correct) {
-      //    ping.currentTime = 0; ping.play();
-      // } else {
-      //    fart.currentTime = 0; fart.play();
-      // }
+      // Play sound: ping for correct, fart for incorrect
+      if (correct) {
+         ping.currentTime = 0; ping.play();
+      } else {
+         fart.currentTime = 0; fart.play();
+      }
       // Proceed after delay
       setTimeout(() => {
          setIsFeedback(false);
