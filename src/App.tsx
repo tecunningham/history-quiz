@@ -1,127 +1,273 @@
 import React, { useState } from 'react';
-import { Container, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import { QuizQuestion, QuizState } from './types';
-import QuizQuestionCard from './components/QuizQuestionCard';
-import QuizResults from './components/QuizResults';
-import CategorySelection from './components/CategorySelection';
+import { Container, CssBaseline, ThemeProvider, createTheme, Paper, Typography, Button, Box, List, ListItem } from '@mui/material';
+
+// Define the Question type
+interface QuizQuestion {
+   id: number;
+   question: string;
+   options: string[];
+   correctAnswer: number;
+   explanation?: string; // Optional explanation
+   category: string;
+}
 
 const theme = createTheme({
    palette: {
       mode: 'light',
-      primary: {
-         main: '#1976d2',
-      },
-      secondary: {
-         main: '#dc004e',
-      },
+      primary: { main: '#1976d2' },
+      secondary: { main: '#dc004e' },
    },
 });
 
-const initialQuestions: QuizQuestion[] = [
+// Renamed to allQuestions and added categories + dummy questions
+const allQuestions: QuizQuestion[] = [
+   // Tudor History Dummies
    {
       id: 1,
-      question: "When was the Declaration of Independence signed?",
-      options: [
-         "July 2, 1776",
-         "July 4, 1776",
-         "July 6, 1776",
-         "July 10, 1776"
-      ],
-      correctAnswer: 1,
-      explanation: "The Declaration of Independence was signed on July 4, 1776, although some delegates signed it later.",
-      category: "American History"
+      question: "Who was the first tudor monarch?",
+      options: ["Henry VII", "James I", "Elizibeth I", "Anne I"],
+      correctAnswer: 0,
+      category: "Tudor History"
    },
    {
       id: 2,
-      question: "Who was the first President of the United States?",
-      options: [
-         "Thomas Jefferson",
-         "John Adams",
-         "George Washington",
-         "Benjamin Franklin"
-      ],
+      question: "How many wives did Henry VIII have?",
+      options: ["10", "5", "6", "200"],
       correctAnswer: 2,
-      explanation: "George Washington was the first President of the United States, serving from 1789 to 1797.",
-      category: "American History"
+      category: "Tudor History"
    },
    {
       id: 3,
-      question: "Which ancient civilization built the pyramids?",
-      options: [
-         "Ancient Greece",
-         "Ancient Rome",
-         "Ancient Egypt",
-         "Ancient China"
-      ],
-      correctAnswer: 2,
-      explanation: "The ancient Egyptians built the pyramids, most notably the Great Pyramid of Giza around 2560 BCE.",
-      category: "Ancient History"
+      question: "how long was the tuder reign?",
+      options: [" 203", "118", "63", "1000"],
+      correctAnswer: 1,
+      category: "Tudor History"
+   },
+   // Mexican Revolution History Dummies
+   {
+      id: 4,
+      question: "when did the mexican revolution begin?",
+      options: ["1905", "1910", "1915", "1920"],
+      correctAnswer: 1,
+      category: "Mexican Revolution History"
+   },
+   {
+      id: 5,
+      question: "who was a key leader of the revolution in the north?",
+      options: ["Emiliano Zapata", "Porfirio Díaz", "Venustiano Carranza", "Pancho Villa"],
+      correctAnswer: 3,
+      category: "Mexican Revolution History"
+   },
+   {
+      id: 6,
+      question: "who won the mexican revolution?",
+      options: ["Venustiano Carranza", "Porfirio Díaz", "Emiliano Zapata", "Pancho Villa"],
+      correctAnswer: 0,
+      category: "Mexican Revolution History"
+   },
+   {
+      id: 7,
+      question: "when did the viicorrian period begin?",
+      options: ["1842", "1837", "1850", "2001"],
+      correctAnswer: 1,
+      category: "Victorian History"
+   },
+   {
+      id: 8,
+      question: "who was the first victorrian monarch?",
+      options: ["Victoria", "Edward VII", "George V", "George VI"],
+      correctAnswer: 0,
+      category: "Victorian History"
+   },
+   {
+      id: 9,
+      question: "what was the exebiton in the crystal palace called?",
+      options: ["The Great Exhibition", "the glasshouse", "The London Eye", "The Tower of London"],
+      correctAnswer: 0,
+      category: "Victorian History"
    }
 ];
 
 function App() {
    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-   const [quizState, setQuizState] = useState<QuizState>({
-      questions: initialQuestions,
-      currentQuestionIndex: 0,
-      userAnswers: {},
-      showResults: false
-   });
+   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
+   const [showResults, setShowResults] = useState(false);
+   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+   const [isFeedback, setIsFeedback] = useState(false);
+
+   // Preload audio
+   const ping = new Audio(process.env.PUBLIC_URL + '/ping.mp3');
+   const fart = new Audio(process.env.PUBLIC_URL + '/fart.mp3');
 
    const handleCategorySelect = (category: string) => {
+      const filteredQuestions = allQuestions.filter(q => q.category === category);
+      setQuestions(filteredQuestions);
       setSelectedCategory(category);
-      // Here you would typically load questions for the selected category
-      // For now, we'll just use the initial questions
+      setCurrentQuestionIndex(0);
+      setUserAnswers({});
+      setShowResults(false);
+      setSelectedOption(null);
+      setIsCorrect(null);
+      setIsFeedback(false);
    };
 
-   const handleAnswerSelect = (questionId: number, selectedOption: number) => {
-      setQuizState(prev => ({
+   const handleAnswerSelect = (selectedOptionIndex: number) => {
+      if (isFeedback) return; // Prevent double-clicks during feedback
+      setSelectedOption(selectedOptionIndex);
+      const correct = questions[currentQuestionIndex].correctAnswer === selectedOptionIndex;
+      setIsCorrect(correct);
+      setUserAnswers((prev) => ({
          ...prev,
-         userAnswers: {
-            ...prev.userAnswers,
-            [questionId]: selectedOption
+         [currentQuestionIndex]: selectedOptionIndex
+      }));
+      setIsFeedback(true);
+      // Play sound: ping for correct, fart for incorrect
+      if (correct) {
+         ping.currentTime = 0; ping.play();
+      } else {
+         fart.currentTime = 0; fart.play();
+      }
+      // Proceed after delay
+      setTimeout(() => {
+         setIsFeedback(false);
+         setSelectedOption(null);
+         setIsCorrect(null);
+         if (currentQuestionIndex + 1 < questions.length) {
+            setCurrentQuestionIndex(currentQuestionIndex + 1);
+         } else {
+            setShowResults(true);
          }
-      }));
-   };
-
-   const handleNextQuestion = () => {
-      setQuizState(prev => ({
-         ...prev,
-         currentQuestionIndex: prev.currentQuestionIndex + 1,
-         showResults: prev.currentQuestionIndex + 1 >= prev.questions.length
-      }));
+      }, 1000);
    };
 
    const handleRestart = () => {
-      setSelectedCategory(null);
-      setQuizState({
-         questions: initialQuestions,
-         currentQuestionIndex: 0,
-         userAnswers: {},
-         showResults: false
-      });
+      setSelectedCategory(null); // Go back to category selection
+      setQuestions([]); // Clear active questions
+      setCurrentQuestionIndex(0);
+      setUserAnswers({});
+      setShowResults(false);
    };
+
+   // --- Render Logic ---
+
+   // 1. Category Selection Screen
+   if (!selectedCategory) {
+      const categories = Array.from(new Set(allQuestions.map(q => q.category)));
+      return (
+         <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <Container maxWidth="sm" sx={{ py: 4, textAlign: 'center' }}>
+               <Paper elevation={3} sx={{ p: 4 }}>
+                  <Typography variant="h4" gutterBottom>
+                     Select a Quiz Category
+                  </Typography>
+                  <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                     {/* Convert Set to Array here before mapping */}
+                     {categories.map(category => (
+                        <Button
+                           key={category}
+                           variant="contained"
+                           onClick={() => handleCategorySelect(category)}
+                           size="large"
+                        >
+                           {category}
+                        </Button>
+                     ))}
+                  </Box>
+               </Paper>
+            </Container>
+         </ThemeProvider>
+      );
+   }
+
+   // 2. Results Screen (uses `questions` state now)
+   if (showResults) {
+      let correctCount = 0;
+      questions.forEach((q, idx) => { // Iterate over active questions
+         if (userAnswers[idx] === q.correctAnswer) correctCount++;
+      });
+      return (
+         <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <Container maxWidth="sm" sx={{ py: 4 }}>
+               <Paper elevation={3} sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography variant="h4" gutterBottom>
+                     Quiz Results for {selectedCategory} {/* Show category */}
+                  </Typography>
+                  <Typography variant="h6">
+                     You got {correctCount} out of {questions.length} correct!
+                  </Typography>
+                  {/* Display explanations or review (optional feature) */}
+                  <Box mt={3}>
+                     <Button variant="contained" onClick={handleRestart}>
+                        Choose New Category
+                     </Button>
+                  </Box>
+               </Paper>
+            </Container>
+         </ThemeProvider>
+      );
+   }
+
+   // 3. Quiz Question Screen (uses `questions` state now)
+   if (questions.length === 0) {
+      // Handle case where questions might be empty after filtering (shouldn't happen with current setup)
+      // This case might occur briefly during state updates, maybe add a loading indicator?
+      return <div>Loading questions or category not found...</div>;
+   }
+
+   const question = questions[currentQuestionIndex]; // Get current question from active set
 
    return (
       <ThemeProvider theme={theme}>
          <CssBaseline />
-         <Container maxWidth="md" sx={{ py: 4 }}>
-            {!selectedCategory ? (
-               <CategorySelection onCategorySelect={handleCategorySelect} />
-            ) : !quizState.showResults ? (
-               <QuizQuestionCard
-                  question={quizState.questions[quizState.currentQuestionIndex]}
-                  selectedAnswer={quizState.userAnswers[quizState.questions[quizState.currentQuestionIndex].id]}
-                  onAnswerSelect={handleAnswerSelect}
-                  onNext={handleNextQuestion}
-               />
-            ) : (
-               <QuizResults
-                  questions={quizState.questions}
-                  userAnswers={quizState.userAnswers}
-                  onRestart={handleRestart}
-               />
-            )}
+         <Container maxWidth="sm" sx={{ py: 4 }}>
+            <Paper elevation={3} sx={{ p: 3 }}>
+               <Typography variant="caption" display="block" gutterBottom>
+                  Category: {selectedCategory} {/* Show category */}
+               </Typography>
+               <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
+                  Question {currentQuestionIndex + 1} / {questions.length}
+               </Typography>
+               <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                  {question.question}
+               </Typography>
+
+               <List sx={{ width: '100%' }}>
+                  {question.options.map((option, idx) => {
+                     let color: 'primary' | 'success' | 'error' | 'inherit' = 'primary';
+                     let variant: 'contained' | 'outlined' = 'outlined';
+                     if (isFeedback && selectedOption === idx) {
+                        color = isCorrect ? 'success' : 'error';
+                        variant = 'contained';
+                     } else if (!isFeedback && userAnswers[currentQuestionIndex] === idx) {
+                        variant = 'contained';
+                     }
+                     return (
+                        <ListItem key={idx} disablePadding sx={{ mb: 1.5 }}>
+                           <Button
+                              fullWidth
+                              variant={variant}
+                              color={color}
+                              onClick={() => handleAnswerSelect(idx)}
+                              sx={{
+                                 py: 1.5,
+                                 justifyContent: 'flex-start',
+                                 textTransform: 'none',
+                                 fontSize: '1rem'
+                              }}
+                              disabled={isFeedback}
+                           >
+                              {option}
+                           </Button>
+                        </ListItem>
+                     );
+                  })}
+               </List>
+            </Paper>
          </Container>
       </ThemeProvider>
    );
