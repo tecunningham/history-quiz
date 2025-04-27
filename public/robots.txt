@@ -1,0 +1,3 @@
+# This file tells search engines to not index the app while in development
+User-agent: *
+Disallow: / 
