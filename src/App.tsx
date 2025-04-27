@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Container, CssBaseline, ThemeProvider, createTheme, Paper, Typography, Button, Box, List, ListItem } from '@mui/material';
 
 // Define the Question type
@@ -98,9 +98,10 @@ function App() {
    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
    const [isFeedback, setIsFeedback] = useState(false);
 
-   // Preload audio
-   const ping = new Audio(process.env.PUBLIC_URL + '/ping.mp3');
-   const fart = new Audio(process.env.PUBLIC_URL + '/fart.mp3');
+   // Use refs to store audio objects for cross-platform compatibility
+   const pingRef = useRef<HTMLAudioElement | null>(null);
+   const fartRef = useRef<HTMLAudioElement | null>(null);
+   const audioInitialized = useRef(false);
 
    const handleCategorySelect = (category: string) => {
       const filteredQuestions = allQuestions.filter(q => q.category === category);
@@ -112,25 +113,41 @@ function App() {
       setSelectedOption(null);
       setIsCorrect(null);
       setIsFeedback(false);
+      // Reset audio refs on new category
+      audioInitialized.current = false;
+      pingRef.current = null;
+      fartRef.current = null;
    };
 
    const handleAnswerSelect = (selectedOptionIndex: number) => {
       if (isFeedback) return; // Prevent double-clicks during feedback
-      setSelectedOption(selectedOptionIndex);
+
       const correct = questions[currentQuestionIndex].correctAnswer === selectedOptionIndex;
+
+      // Initialize audio objects on first user interaction
+      if (!audioInitialized.current) {
+         pingRef.current = new Audio(process.env.PUBLIC_URL + '/ping.mp3');
+         fartRef.current = new Audio(process.env.PUBLIC_URL + '/fart.mp3');
+         // Play and pause to "prime" for iOS
+         pingRef.current.play().then(() => pingRef.current!.pause()).catch(() => { });
+         fartRef.current.play().then(() => fartRef.current!.pause()).catch(() => { });
+         audioInitialized.current = true;
+      }
+
+      // Play the correct sound
+      const sound = correct ? pingRef.current : fartRef.current;
+      if (sound) {
+         sound.currentTime = 0;
+         sound.play();
+      }
+
+      setSelectedOption(selectedOptionIndex);
       setIsCorrect(correct);
       setUserAnswers((prev) => ({
          ...prev,
          [currentQuestionIndex]: selectedOptionIndex
       }));
       setIsFeedback(true);
-      // Play sound: ping for correct, fart for incorrect
-      if (correct) {
-         ping.currentTime = 0; ping.play();
-      } else {
-         fart.currentTime = 0; fart.play();
-      }
-      // Proceed after delay
       setTimeout(() => {
          setIsFeedback(false);
          setSelectedOption(null);
